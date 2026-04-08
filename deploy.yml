@@ -1,0 +1,36 @@
+name: vProfile Deployment
+on:
+  push:
+    branches:
+      - main  # Trigger on push to main
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build and Test with Maven
+        run: mvn clean install -DskipTests  # Standard build command
+
+      - name: Generate Deployment Artifact
+        run: cp target/vprofile-v2.war ROOT.war  # Renaming for root deployment
+
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v21
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: "vprofile-app"  # MUST MATCH YOUR EB APP NAME
+          environment_name: "vprofileapp-env-env" # MUST MATCH YOUR EB ENV NAME
+          version_label: "vprofile-${{ github.sha }}"
+          region: us-east-1
+          deployment_package: ROOT.war
